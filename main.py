@@ -1,16 +1,22 @@
-# This is a sample Python script.
+from typing import Set, List
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import requests
+import re
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def get_game_pages() -> Set[str]:
+    result = requests.get('https://no-more-jockeys.fandom.com/wiki/Category:Game').text
+
+    matches: List[str] = re.findall(r'(<a href="\/wiki\/.*" class="category-page__member-link" title=".*">)', result)
+    all_pages: Set[str] = set()
+    for match in matches:
+        page_slug = re.search(r'href="(.*)" class', match).group(1)
+        all_pages.add(page_slug)
+
+    return all_pages
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    pages = get_game_pages()
+    print(pages)
