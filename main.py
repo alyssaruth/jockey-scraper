@@ -48,6 +48,8 @@ def get_game_pages() -> Set[str]:
         page_slug = re.search(r'href="(.*)" class', match).group(1)
         all_pages.add(page_slug)
 
+    print('\n'.join(all_pages))
+
     return all_pages
 
 
