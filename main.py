@@ -22,7 +22,7 @@ class Round(object):
         self.name = self.convert_name(entries[2])
         self.category = entries[3]
         self.name_another = entries[4]
-        self.game_page = page_slug.replace('/wiki/', '').replace('_', ' ')
+        self.game_page = page_slug.replace('_', ' ')
         self.challenged = "✔" in entries[5]
 
     def convert_name(self, name_html_str: str) -> str:
@@ -40,12 +40,12 @@ class Round(object):
 
 
 def get_game_pages() -> Set[str]:
-    result = requests.get(f'{BASE_URL}/wiki/Category:Game').text
+    result = requests.get(f'{BASE_URL}').text
 
-    matches: List[str] = re.findall(r'(<a href="/wiki/.*" class="category-page__member-link" title=".*">)', result)
+    matches: List[str] = re.findall(r'(<td><a href="/wiki/(.*)" title=".*">)', result)
     all_pages: Set[str] = set()
     for match in matches:
-        page_slug = re.search(r'href="(.*)" class', match).group(1)
+        page_slug = match[1]
         all_pages.add(page_slug)
 
     print('\n'.join(all_pages))
@@ -54,7 +54,7 @@ def get_game_pages() -> Set[str]:
 
 
 def parse_plays(page_slug: str, player_to_plays: dict[str, List[Round]]):
-    result = requests.get(f'{BASE_URL}{page_slug}').text.replace('\n', '')
+    result = requests.get(f'{BASE_URL}/wiki/{page_slug}').text.replace('\n', '')
     table = re.search(r'<tbody>(.*)</tbody>', result).group(1)
     rows = table.replace('</tr><tr>', '\n').replace('<tr>', '').replace('</tr>', '').split('\n')
     rows.pop(0)
