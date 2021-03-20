@@ -2,6 +2,7 @@ from typing import Set, List
 
 import requests
 import re
+import datetime
 
 BASE_URL = 'https://no-more-jockeys.fandom.com'
 
@@ -14,8 +15,9 @@ class Round(object):
     name_another: str
     challenged: bool
     game_page: str
+    played: datetime
 
-    def __init__(self, row_str: str, page_slug: str):
+    def __init__(self, row_str: str, page_slug: str, played: datetime):
         entries = row_str.replace('</td><td>', '\n').replace('<td>', '').replace('</td>', '').split('\n')
         self.round_no = int(entries[0])
         self.player = entries[1]
@@ -24,6 +26,7 @@ class Round(object):
         self.name_another = entries[4]
         self.game_page = page_slug.replace('_', ' ')
         self.challenged = "✔" in entries[5]
+        self.played = played
 
     def convert_name(self, name_html_str: str) -> str:
         return name_html_str.replace('<a target="_blank" rel="nofollow noreferrer noopener" class="external text" href="', '[')\
@@ -48,20 +51,23 @@ def get_game_pages() -> Set[str]:
         page_slug = match[1]
         all_pages.add(page_slug)
 
-    print('\n'.join(all_pages))
+    #  print('\n'.join(all_pages))
 
     return all_pages
 
 
 def parse_plays(page_slug: str, player_to_plays: dict[str, List[Round]]):
     result = requests.get(f'{BASE_URL}/wiki/{page_slug}').text.replace('\n', '')
+    recorded_str = re.search(r'<h3 class="pi-data-label pi-secondary-font">Recorded</h3>		<div class="pi-data-value pi-font">([0-9/]+)</div>', result).group(1)
+    recorded = datetime.datetime.strptime(recorded_str, "%d/%m/%Y")
     table = re.search(r'<tbody>(.*)</tbody>', result).group(1)
     rows = table.replace('</tr><tr>', '\n').replace('<tr>', '').replace('</tr>', '').split('\n')
     rows.pop(0)
-    parsed_rounds = [Round(row, page_slug) for row in rows]
+    parsed_rounds = [Round(row, page_slug, recorded) for row in rows]
     for round in parsed_rounds:
         existing_list = player_to_plays.get(round.name, [])
         existing_list.append(round)
+        existing_list = sorted(existing_list, key=lambda item: item.played)
         player_to_plays[round.name] = existing_list
 
 
