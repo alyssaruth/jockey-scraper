@@ -79,6 +79,7 @@ def get_first_named(plays: List[Round]) -> str:
     plays_by_date = sorted(plays, key=lambda round: round.played)[0]
     return plays_by_date.played.strftime("%Y-%m-%d")
 
+
 if __name__ == '__main__':
     pages = get_game_pages()
 
