@@ -1,10 +1,8 @@
-from typing import Set, List
+from typing import List
 
-import requests
-import re
 import datetime
 
-BASE_URL = 'https://no-more-jockeys.fandom.com'
+from utils import get_game_pages, GamePage
 
 
 class Round(object):
@@ -14,17 +12,17 @@ class Round(object):
     category: str
     name_another: str
     challenged: bool
-    game_page: str
+    game: GamePage
     played: datetime
 
-    def __init__(self, row_str: str, page_slug: str, played: datetime):
+    def __init__(self, row_str: str, game: GamePage, played: datetime):
         entries = row_str.replace('</td><td>', '\n').replace('<td>', '').replace('</td>', '').split('\n')
         self.round_no = int(entries[0])
         self.player = entries[1]
         self.name = self.convert_name(entries[2])
         self.category = entries[3]
         self.name_another = entries[4]
-        self.game_page = page_slug.replace('_', ' ').replace('%27', '\'')
+        self.game = game
         self.challenged = "✔" in entries[5]
         self.played = played
 
@@ -33,7 +31,7 @@ class Round(object):
             .replace('">', ' ').replace('</a>', ']')
 
     def get_play_summary(self) -> str:
-        starting_str = f'{self.player}: [[{self.game_page}|{self.game_page}]]'
+        starting_str = f'{self.player}: {self.game.as_wiki_link()}'
         if self.challenged:
             starting_str += ' ✘'
         return starting_str
@@ -42,28 +40,10 @@ class Round(object):
         return f'#{self.round_no} - {self.player}: {self.name}'
 
 
-def get_game_pages() -> Set[str]:
-    result = requests.get(f'{BASE_URL}').text
-
-    matches: List[str] = re.findall(r'(<td><a href="/wiki/(.*)" title=".*">)', result)
-    all_pages: Set[str] = set()
-    for match in matches:
-        page_slug = match[1]
-        all_pages.add(page_slug)
-
-    #  print('\n'.join(all_pages))
-
-    return all_pages
-
-
-def parse_plays(page_slug: str, player_to_plays: dict[str, List[Round]]):
-    result = requests.get(f'{BASE_URL}/wiki/{page_slug}').text.replace('\n', '')
-    recorded_str = re.search(r'<h3 class="pi-data-label pi-secondary-font">Recorded</h3>		<div class="pi-data-value pi-font">([0-9/]+)</div>', result).group(1)
-    recorded = datetime.datetime.strptime(recorded_str, "%d/%m/%Y")
-    table = re.search(r'<tbody>(.*)</tbody>', result).group(1)
-    rows = table.replace('</tr><tr>', '\n').replace('<tr>', '').replace('</tr>', '').split('\n')
+def parse_plays(game_page: GamePage, player_to_plays: dict[str, List[Round]]):
+    rows = game_page.raw_plays_table.replace('</tr><tr>', '\n').replace('<tr>', '').replace('</tr>', '').split('\n')
     rows.pop(0)
-    parsed_rounds = [Round(row, page_slug, recorded) for row in rows]
+    parsed_rounds = [Round(row, game_page, game_page.recorded_date) for row in rows]
     for round in parsed_rounds:
         existing_list = player_to_plays.get(round.name, [])
         existing_list.append(round)
