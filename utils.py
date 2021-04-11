@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import Set, List
+from typing import Set, List, Callable, Iterable, TypeVar
 
 import requests
 
@@ -35,6 +35,9 @@ class GamePage(object):
             return self.rounds
 
         return int(self.chan_index)
+
+    def get_raw_chan_ratio(self) -> float:
+        return self.get_normalised_chan_index() / self.rounds
 
     def get_chan_ratio(self) -> str:
         raw_ratio = self.get_normalised_chan_index() / self.rounds
@@ -83,3 +86,10 @@ def get_rounds(page_contents: str) -> int:
         r'<h3 class="pi-data-label pi-secondary-font">Rounds</h3>		<div class="pi-data-value pi-font">([0-9]+)</div>',
         page_contents)
     return int(rounds_result.group(1))
+
+
+T = TypeVar('T')
+
+
+def count_where(fn: Callable[[T], bool], iterable: Iterable[T]) -> int:
+    return len(list(filter(fn, iterable)))
